@@ -1,4 +1,4 @@
-package com.wxrem.common;
+package com.wxrem.common.wxewm;
 
 import com.google.zxing.LuminanceSource;
 

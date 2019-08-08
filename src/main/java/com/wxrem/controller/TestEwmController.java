@@ -1,6 +1,6 @@
 package com.wxrem.controller;
 
-import com.wxrem.common.QRCodeUtil;
+import com.wxrem.common.wxewm.QRCodeUtil;
 
 /**
  * 微信二维码生成test
