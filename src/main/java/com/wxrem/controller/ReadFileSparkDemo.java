@@ -20,7 +20,7 @@ import java.util.Iterator;
  *
  */
 
-public class TestSpark {
+public class ReadFileSparkDemo {
     public static void main(String[] args) {
         System.out.println("dasadasda");
         System.out.println(System.getenv("HADOOP_USER_NAME"));
@@ -44,6 +44,5 @@ public class TestSpark {
         resultRDD.saveAsTextFile("D:\\result2");
 
 //        resultRDD.collect();
-
     }
 }
