@@ -7,6 +7,7 @@ import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.otter.canal.client.CanalConnector;
 import com.alibaba.otter.canal.protocol.Message;
+import com.primeton.di.trans.steps.canalinput.CanalInputMeta;
 import com.primeton.di.trans.steps.canalinput.utils.domain.TableData;
 import com.alibaba.otter.canal.protocol.CanalEntry.Column;
 import com.alibaba.otter.canal.protocol.CanalEntry.Entry;
@@ -16,10 +17,11 @@ import com.alibaba.otter.canal.protocol.CanalEntry.RowChange;
 import com.alibaba.otter.canal.protocol.CanalEntry.RowData;
 
 /**
- * 测试canal-1.1.0 binlog 为 row
+ * 测试canal-1.1.0 binlog 为 row、mixed
  */
 public class CanalUtil {
 
+	private static CanalInputMeta canalInputMeta;
 	private String binlogType; // 日志模式选择ROW/Mixed
 	private int intervalTime; // 间隔时间配置ms
 
@@ -29,9 +31,6 @@ public class CanalUtil {
 	private String databaseName;
 
 	public CanalUtil( String binlogType, int intervalTime,String tableName, String tableNames, String databaseName) {
-//		this.canalServer = canalServer;
-//		this.canalPort = canalPort;
-//		this.canalInstance = canalInstance;
 		this.binlogType = binlogType;
 		this.intervalTime = intervalTime;
 
@@ -41,28 +40,19 @@ public class CanalUtil {
 		
 	}
 
-	public JSONArray startSubscribe(CanalConnector connector) {			
-		// 第二步：开启全部订阅
-		connector.connect();
-		/**
-		 * #(1)这里黑白名单可以覆盖defaultDatabaseName。 #(2)如果Client端
-		 * 配置了connector.subscribe则会覆盖黑白名单配置 #表过滤--白名单 只监听库表
-		 * #如testDB\..*只监听testDB数据库,testDB\.test_1 只监听testDB库中test_1表。多个用逗号分开
-		 * #此过滤条件只针对row模式的数据有效(ps. mixed/statement因为不解析sql，所以无法准确提取tableName进行过滤)
-		 * #canal.instance.filter.regex = .*\\..*
-		 */
-		connector.subscribe(".*\\..*");
-
+	public JSONArray startSubscribe(CanalConnector connector,CanalInputMeta meta) {			
+	
+		canalInputMeta = meta;
 		JSONArray result = new JSONArray();
 		// 第三步：循环订阅
 
 		// 获取指定数量的数据,一次获取完了sleep时间段的数据，非阻塞，使用1s来解决非阻塞的cpu性能问题
-//            Message message = connector.getWithoutAck(batchSize);
 		Message message = connector.getWithoutAck(1000, (long) 1, TimeUnit.SECONDS);
 		long batchId = message.getId();
 		int size = message.getEntries().size();
 		try {
 			if (batchId == -1 || size == 0) {
+				System.out.println("no message !");
 				Thread.sleep(intervalTime);
 			} else {
 				result = getEntry(message.getEntries());
@@ -94,7 +84,6 @@ public class CanalUtil {
 						e);
 			}
 			
-			
 			//过滤库
 			if (!entry.getHeader().getSchemaName().equalsIgnoreCase(databaseName)) continue;
 			//不是多表，判断是否是对应单表,全否return
@@ -103,30 +92,37 @@ public class CanalUtil {
 				//是多表，判断是否包含,不包含 return
 			}else if (!tableNames.toLowerCase().contains(entry.getHeader().getTableName().toLowerCase())) continue;
 			
-			
-			//ddl or hasSql
-			if (rowChange.getSql() != null && !("").equals(rowChange.getSql())) {
-				if (rowChange.getIsDdl()) {
-					//ddl操作[是否是ddl变更操作，比如create table/drop table] 
-					
-					
-				}else {
-					//mixed模式的statement数据，解析sql语句
-					
-				}
-				continue;
-			}
-			
-			
 			TableData tableData = new TableData();
 			tableData.setDatabaseName(entry.getHeader().getSchemaName());
 			tableData.setTableName(entry.getHeader().getTableName());
 			tableData.setEventType(rowChange.getEventType().name());
 			tableData.setLogfileOffset(entry.getHeader().getLogfileOffset());
 			tableData.setCreateTime(System.currentTimeMillis());
+			
+			JSONObject result = new JSONObject();
+			result.put("databaseName", tableData.getDatabaseName());
+			result.put("tableName", tableData.getTableName());
+			result.put("eventType", tableData.getEventType());
+			result.put("logfileOffset", tableData.getLogfileOffset());
+			result.put("createTime", tableData.getCreateTime());
+			
+			
+			//ddl or hasSql
+			
+			if (rowChange.getSql() != null && !("").equals(rowChange.getSql())) {
+				System.out.println("rowChange.getSql ----->" + rowChange.getSql());
+				if (rowChange.getIsDdl()) {
+					//ddl操作[是否是ddl变更操作，比如create table/drop table] 操作no
+			
+				}else {
+					//mixed模式的statement数据，解析sql语句
+					resultArray.add(resultStatement(rowChange.getSql(), result, result.getString("eventType")));
+				}
+				continue;
+			}
 
 			for (RowData rowData : rowChange.getRowDatasList()) {
-				resultArray.add(resultData(rowData, tableData));
+				resultArray.add(resultRow(rowData, result, result.getString("eventType")));
 			}
 
 		}
@@ -135,19 +131,108 @@ public class CanalUtil {
 
 	/**
 	 *
-	 * @param rowData
-	 * @param tableData
-	 * @return json格式的string
+	 * statement模式数据解析、格式封装
+	 * @return JSONObject
 	 */
-	public JSONObject resultData(RowData rowData, TableData tableData) {
+	private JSONObject resultStatement(String rowSql, JSONObject result, String eventType) {
+		
+        String sql = rowSql.replace("`", "").toLowerCase();
+        System.out.println(sql);
+        
+		if (eventType.equals(EventType.INSERT.name())){
+			JSONObject columns = getInsertData(sql,result.getString("tableName"));
+			result.put("columns", columns);
+		}
 
-		JSONObject result = new JSONObject();
-		result.put("databaseName", tableData.getDatabaseName());
-		result.put("tableName", tableData.getTableName());
-		result.put("eventType", tableData.getEventType());
-		result.put("logfileOffset", tableData.getLogfileOffset());
-		result.put("createTime", tableData.getCreateTime());
+		//update找到where 条件主键，反查库
+		if (eventType.equals(EventType.UPDATE.name())){
+			JSONObject columns = getUpdateData(sql,result.getString("tableName"));
+			result.put("columns", columns);
+		}
+		//delete 直接封装，返回
+		// DELETE FROM `cap_role` WHERE (`ROLE_ID`='2')
+		if (eventType.equals(EventType.DELETE.name())){
+			JSONObject condition = getDeleteData(sql);
+			result.put("condition", condition);
+		}
 
+		return result;
+	}
+	
+	
+    private static JSONObject getUpdateData(String sqlUpdate, String tableName) {
+	        
+	        String newQuerySql =" select * from " + tableName + sqlUpdate.substring(sqlUpdate.indexOf("where")-1);
+	        System.out.println("newQuerySql :  "+ newQuerySql);
+	        
+	        DatabaseUtils.getConnection("mysql", canalInputMeta.getCanalServer(), canalInputMeta.getPort(), 
+	        		canalInputMeta.getUsername(), canalInputMeta.getPassword(),canalInputMeta.getDatabaseName());
+	        List<String> columnNames = DatabaseUtils.getColumnNames(tableName);
+	        
+	        DatabaseUtils.getConnection("mysql", canalInputMeta.getCanalServer(), canalInputMeta.getPort(), 
+	        		canalInputMeta.getUsername(), canalInputMeta.getPassword(),canalInputMeta.getDatabaseName());
+	        JSONObject row = DatabaseUtils.queryResultById(newQuerySql,tableName,columnNames);
+	        return row;
+	    }
+
+    
+    //delete from canal_role_test where (role_id='4')
+    private static JSONObject getDeleteData(String sqlDelete) {
+        String whereSql = sqlDelete.substring(sqlDelete.indexOf("where")+6);
+        JSONObject row = new JSONObject();
+        if (whereSql.contains("(")) {
+        	whereSql = whereSql.replace("(", "").replace(")", "");
+		}
+        
+        if (whereSql.contains("and")){
+            String[] ands = whereSql.split("and");
+            for (int i = 0; i < ands.length; i++) {
+                String[] data = ands[i].split("=");
+                row.put(data[0].trim(),data[1].replace("'","").trim());
+            }
+        }else {
+            String[] data = whereSql.split("=");
+            row.put(data[0].trim(),data[1].replace("'","").trim());
+        }
+        System.out.println(row);
+        return row;
+    }
+
+
+
+    private static JSONObject getInsertData(String sqlInsert, String tableName) {
+    	 String[] data = sqlInsert.split("values");
+         String[] cloumns = data[0].substring(data[0].indexOf("(")+1,data[0].indexOf(")")).split(",");
+         String[] values = data[1].substring(data[1].indexOf("(")+1,data[1].indexOf(")")).split(",");
+
+         StringBuffer whereSql = new StringBuffer().append(" where 1=1 ");
+         for (int i = 0; i < cloumns.length; i++) {
+             whereSql.append(" and ").append(cloumns[i]).append(" = ").append(values[i]);
+         }
+         System.out.println(whereSql);
+
+         String newQuerySql =" select * from " + tableName + whereSql.toString();
+         System.out.println(newQuerySql);
+
+         DatabaseUtils.getConnection("mysql", canalInputMeta.getCanalServer(), canalInputMeta.getPort(), 
+	        		canalInputMeta.getUsername(), canalInputMeta.getPassword(),canalInputMeta.getDatabaseName());
+         List<String> columnNames = DatabaseUtils.getColumnNames(tableName);
+         
+         DatabaseUtils.getConnection("mysql", canalInputMeta.getCanalServer(), canalInputMeta.getPort(), 
+	        		canalInputMeta.getUsername(), canalInputMeta.getPassword(),canalInputMeta.getDatabaseName());
+
+
+         JSONObject row = DatabaseUtils.queryResultById(newQuerySql,tableName,columnNames);
+
+         return row;
+    }
+
+	/**
+	 *
+	 * Row模式数据解析、格式封装
+	 * @return JSONObject
+	 */
+	public JSONObject resultRow(RowData rowData, JSONObject result, String eventType) {
 		// 存放变化后的字段
 		JSONObject columns = new JSONObject();
 		result.put("columns", columns);
@@ -157,8 +242,8 @@ public class CanalUtil {
 		result.put("condition", condition);
 
 		// insert,update 处理after数据
-		if (tableData.getEventType().equals(EventType.INSERT.name())
-				|| tableData.getEventType().equals(EventType.UPDATE.name())) {
+		if (eventType.equals(EventType.INSERT.name())
+				|| eventType.equals(EventType.UPDATE.name())) {
 
 			for (Column column : rowData.getAfterColumnsList()) {
 				columns.put(column.getName(), column.getValue());
@@ -167,7 +252,7 @@ public class CanalUtil {
 
 		// delete处理before数据，只加condition条件
 		// a. isKey,直接删除，无key则以其他所有数据为条件删除
-		if (tableData.getEventType().equals(EventType.DELETE.name())) {
+		if (eventType.equals(EventType.DELETE.name())) {
 			for (Column column : rowData.getBeforeColumnsList()) {
 				if (column.hasIsKey()) {
 					condition.put(column.getName(), column.getValue());
@@ -182,7 +267,7 @@ public class CanalUtil {
 		// a. isKey,直接以before的key来更新after后的数据，这个key也有可能修改 ，所以取消
 		// 无key则以其他update为false的数据为条件更新，取消
 		// 全更新 字段则以before数据作为条件更新 绝对条件update
-		if (tableData.getEventType().equals(EventType.UPDATE.name())) {
+		if (eventType.equals(EventType.UPDATE.name())) {
 			for (Column column : rowData.getBeforeColumnsList()) {
 				condition.put(column.getName(), column.getValue());
 			}

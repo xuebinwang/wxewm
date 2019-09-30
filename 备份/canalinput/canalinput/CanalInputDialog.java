@@ -212,6 +212,7 @@ public class CanalInputDialog extends BaseStepDialog implements StepDialogInterf
 			new Label(composite, SWT.NONE | SWT.ARROW_RIGHT);
 			isOneTableStringButton = new Button(composite, SWT.RADIO|SWT.LEFT);	
 			isOneTableStringButton.setText(BaseMessages.getString( PKG,"CanalInputDialog.isOneTableStringButton"));
+			
 			isOneTableStringButton.setSelection(true);
 			new Label(composite, SWT.NONE | SWT.ARROW_RIGHT);
 			
@@ -350,6 +351,7 @@ public class CanalInputDialog extends BaseStepDialog implements StepDialogInterf
 			databaseNameText.setText(input.getDatabaseName());
 		}
 				
+
 		//单表多表选择按钮,0为单表，1为多表,默认0
 		if (input.getIsOneTableString()==0) {
 			
@@ -360,17 +362,22 @@ public class CanalInputDialog extends BaseStepDialog implements StepDialogInterf
 			
 			if (input.getColumns()!=null){
 				String[] columns=input.getColumns().split(",");
+				selectColumnOrTableList.table.setItemCount(columns.length);
 				for (int i=0;i<columns.length;i++){
 					TableItem item = selectColumnOrTableList.table.getItem(i);
-					if (columns[i]!=null     ) item.setText(1, columns[i]);
+					if (columns[i]!=null) item.setText(1, columns[i]);
 				}
 			}
 		}else {
 			if (input.getTables()!=null){
-				String[] tables=input.getTables().split(",");
-				for (int i=0;i<tables.length;i++){
+				String[] tables = input.getTables().split(",");
+				selectColumnOrTableList.table.setItemCount(tables.length);
+				for (int i = 0; i < tables.length; i++) {
 					TableItem item = selectColumnOrTableList.table.getItem(i);
-					if (tables[i]!=null     ) item.setText(1, tables[i]);
+					if (tables[i]!=null) {
+						item.setText(1, tables[i]);
+					}
+				
 				}
 			}
 		}
@@ -385,7 +392,7 @@ public class CanalInputDialog extends BaseStepDialog implements StepDialogInterf
 		String password = null;
 		String server = null;
 		String database = null;
-		int port=5151;
+		int port = 3306;
 		if(usernameText.getText().trim().length()>0){
 			username=usernameText.getText().trim();
     	}
@@ -512,9 +519,8 @@ public class CanalInputDialog extends BaseStepDialog implements StepDialogInterf
 	    	
 	    	int nrfields = selectColumnOrTableList.nrNonEmpty();
 	    	StringBuffer columnOrTableBuffer = new StringBuffer();
-	    	for (int i=0;i<nrfields;i++){
+	    	for (int i=0 ; i<nrfields ; i++){
 				TableItem item  = selectColumnOrTableList.getNonEmpty(i);
-				//meta.getInputLookup()[i]        = item.getText(1);
 				
 				columnOrTableBuffer.append(item.getText(1));
 	    		if(i!=nrfields-1){
@@ -534,24 +540,7 @@ public class CanalInputDialog extends BaseStepDialog implements StepDialogInterf
 		    	meta.setTables(columnOrTableBuffer.toString());
 			}
 			
-	    	
-//	    	if(manyTablesNameText.getText().trim().length()>0){
-//	    		meta.setManyTablesName(manyTablesNameText.getText().trim());
-//	    	}
-//	    	
-	    	
-	    	
-//	    	
-//	    	if(whereText.getText().trim().length()>0){
-//	    		meta.setWhere(whereText.getText().trim());
-//	    	}else{
-//	    		meta.setWhere("");
-//	    	}
-	    	
-//	    	input.setVariableReplacementActive(wVariables.getSelection());
-	    	
-	    	
-
+	   
 
 	    	stepname=wStepname.getText();
 	    }
@@ -565,7 +554,7 @@ public class CanalInputDialog extends BaseStepDialog implements StepDialogInterf
 		String server = null;
 		String database = null;
 		String tablename=null;
-		int port=5151;
+		int port=3306;
 		if(usernameText.getText().trim().length()>0){
 			username=usernameText.getText().trim();
     	}

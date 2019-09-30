@@ -33,6 +33,7 @@ import com.primeton.di.trans.step.StepInterface;
 import com.primeton.di.trans.step.StepMeta;
 import com.primeton.di.trans.step.StepMetaInterface;
 import com.primeton.di.trans.steps.canalinput.utils.DatabaseUtils;
+import com.primeton.di.trans.steps.canalinput.utils.domain.DatabaseDomain;
 import com.primeton.metastore.api.IMetaStore;
 
 /**
@@ -247,7 +248,6 @@ public class CanalInputMeta extends BaseStepMeta implements StepMetaInterface{
 		
 	}
 	 /**
-	  * 单表处理一个字段和类型，需要增加一个rowkey字段:hb_row_key
 	  * @param row
 	  * @param origin
 	  * @param info
@@ -256,14 +256,10 @@ public class CanalInputMeta extends BaseStepMeta implements StepMetaInterface{
 	  */
 		private void getFieldsOne(RowMetaInterface row, String origin, RowMetaInterface[] info, StepMeta nextStep,
 				VariableSpace space) {
+		
 			 DatabaseUtils.getConnection("mysql", server, port, username, password,databaseName);
 			 
-//			List<String> ColumnTypes = DatabaseUtils.getColumnTypes(oneTableName);
 			String[] cols = columns.split(",");
-			ValueMetaInterface v0 = new ValueMeta("hb_row_key".toUpperCase(), ValueMetaInterface.TYPE_STRING);
-			v0.setOrigin(origin);
-			row.addValueMeta(v0);
-			
 			for (int i = 0; i < cols.length; i++) {
 				ValueMetaInterface v = new ValueMeta(cols[i],
 						ValueMetaInterface.TYPE_STRING);
@@ -274,7 +270,6 @@ public class CanalInputMeta extends BaseStepMeta implements StepMetaInterface{
 			
 		}
 		 /**
-		  * 单表处理一个字段和类型，需要增加一个rowkey字段:hb_row_key
 		  * @param row
 		  * @param origin
 		  * @param info
@@ -283,14 +278,9 @@ public class CanalInputMeta extends BaseStepMeta implements StepMetaInterface{
 		  */
 			private void getFieldsMany(RowMetaInterface row, String origin, RowMetaInterface[] info, StepMeta nextStep,
 					VariableSpace space) {
-				 DatabaseUtils.getConnection("mysql", server, port, username, password,databaseName);
-				 
-//				List<String> ColumnTypes = DatabaseUtils.getColumnTypes(oneTableName);
+				 DatabaseUtils.getConnection("mysql", server, port, username, password,databaseName);		 
 				String[] cols = tables.split(",");
-				ValueMetaInterface v0 = new ValueMeta("hb_row_key".toUpperCase(), ValueMetaInterface.TYPE_STRING);
-				v0.setOrigin(origin);
-				row.addValueMeta(v0);
-				
+			
 				for (int i = 0; i < cols.length; i++) {
 					ValueMetaInterface v = new ValueMeta(cols[i],
 							ValueMetaInterface.TYPE_STRING);
@@ -305,16 +295,8 @@ public class CanalInputMeta extends BaseStepMeta implements StepMetaInterface{
 	
 	public static final RowMetaInterface buildRow(Connection conn,CanalInputMeta meta,
 			List<CheckResultInterface> remarks, String origin, String[] cols) {
-//		for(String tableName :DatabaseUtils.getTableNames()) {
-//			List<String> Columns = DatabaseUtils.getColumnComments(tableName);
-//			System.out.println(tableName);
-//			System.out.println(Columns);
-//		}
 		RowMetaInterface row = new RowMeta();
-		List<String> ColumnTypes = DatabaseUtils.getColumnTypes(oneTableName);
-//		System.out.println(oneTableName);
-//		System.out.println(cols);
-//		System.out.println(ColumnTypes);
+
 		for (int i = 0; i < cols.length; i++) {
 			ValueMetaInterface v = new ValueMeta(cols[i],
 					ValueMetaInterface.TYPE_STRING);
@@ -325,212 +307,8 @@ public class CanalInputMeta extends BaseStepMeta implements StepMetaInterface{
 		return row;
 		
 	}
-	public static final RowMetaInterface buildRowSE(SeConnection conn,CanalInputMeta meta,
-		List<CheckResultInterface> remarks, String origin, String[] cols) {
-		
-//		//0代表是单表
-//		 if (isOneTableString == 0) {
-//			 buildRowOne(conn,meta,remarks,origin,cols);
-//		}else if (isOneTableString == 1) {
-//			//是多表选择，只做表名。。。。先不做处理,不清楚怎么做
-//		}
-		RowMetaInterface row = new RowMeta();
-//		Object[] rowData = null;
-		try {
-			/*SeConnection conn = new SeConnection(meta.getServer(),
-					meta.getInstance(), meta.getDatabaseName(),
-					meta.getUsername(), meta.getPassword());*/
-			SeTable table = new SeTable(conn, meta.getOneTableName());
-			SeColumnDefinition[] tableDef = table.describe();
-			for (int n = 0; n < cols.length; n++) {
-				for (int i = 0; i < tableDef.length; i++) {
-	
-					int colNum = i;
-					if (tableDef[colNum].getName().equalsIgnoreCase(cols[n])) {
-						int type = 0;
-	
-						int dataType = tableDef[colNum].getType();
-	
-						ValueMetaInterface v = null;
-	
-						switch (dataType) {
-//						case SeColumnDefinition.TYPE_XML:
-//							if (meta.getIsString() != 0) {
-//								type = ValueMetaInterface.TYPE_STRING;
-//							} else {
-//								type = ValueMetaInterface.TYPE_OBJECT;
-//							}
-//							v = new ValueMeta(tableDef[colNum].getName(), type);
-//							v.setOrigin(origin);
-//							row.addValueMeta(v);
-//	
-//							// System.out.println(colDefs[colNum].getName()+
-//							// rows.getString(colNum));
-//	
-//							break;
-						case SeColumnDefinition.TYPE_BLOB:
-							v = new ValueMeta(tableDef[colNum].getName(),
-									ValueMetaInterface.TYPE_BINARY);
-							v.setOrigin(origin);
-							row.addValueMeta(v);
-	
-							// System.out.println(colDefs[colNum].getName()+
-							// rows.getFloat(colNum));
-	
-							break;
-						case SeColumnDefinition.TYPE_NCLOB:
-							v = new ValueMeta(tableDef[colNum].getName(),
-									ValueMetaInterface.TYPE_STRING);
-							v.setOrigin(origin);
-							row.addValueMeta(v);
-	
-							// System.out.println(colDefs[colNum].getName()+
-							// rows.getFloat(colNum));
-	
-							break;
-						case SeColumnDefinition.TYPE_INT16:
-							v = new ValueMeta(tableDef[colNum].getName(),
-									ValueMetaInterface.TYPE_INTEGER);
-							v.setOrigin(origin);
-							row.addValueMeta(v);
-	
-							// System.out.println(colDefs[colNum].getName()+
-							// rows.getFloat(colNum));
-	
-							break;
-						case SeColumnDefinition.TYPE_NSTRING:
-							v = new ValueMeta(tableDef[colNum].getName(),
-									ValueMetaInterface.TYPE_STRING);
-							v.setOrigin(origin);
-							row.addValueMeta(v);
-	
-							// System.out.println(colDefs[colNum].getName()+
-							// rows.getFloat(colNum));
-	
-							break;
-						case SeColumnDefinition.TYPE_UUID:
-							v = new ValueMeta(tableDef[colNum].getName(),
-									ValueMetaInterface.TYPE_STRING);
-							v.setOrigin(origin);
-							row.addValueMeta(v);
-	
-							// System.out.println(colDefs[colNum].getName()+
-							// rows.getFloat(colNum));
-	
-							break;
-//						case SeColumnDefinition.TYPE_RASTER:
-//							if (meta.getIsString() != 0) {
-//								type = ValueMetaInterface.TYPE_STRING;
-//							} else {
-//								type = ValueMetaInterface.TYPE_OBJECT;
-//							}
-//							v = new ValueMeta(tableDef[colNum].getName(), type);
-//							v.setOrigin(origin);
-//							row.addValueMeta(v);
-//	
-//							// System.out.println(colDefs[colNum].getName()+
-//							// rows.getFloat(colNum));
-//	
-//							break;
-						case SeColumnDefinition.TYPE_FLOAT64:
-							v = new ValueMeta(tableDef[colNum].getName(),
-									ValueMetaInterface.TYPE_NUMBER);
-							v.setOrigin(origin);
-							row.addValueMeta(v);
-	
-							// System.out.println(colDefs[colNum].getName()+
-							// rows.getFloat(colNum));
-	
-							break;
-						case SeColumnDefinition.TYPE_FLOAT32:
-							v = new ValueMeta(tableDef[colNum].getName(),
-									ValueMetaInterface.TYPE_NUMBER);
-							v.setOrigin(origin);
-							row.addValueMeta(v);
-	
-							// System.out.println(colDefs[colNum].getName()+"="+
-							// rows.getFloat(colNum));
-	
-							break;
-						case SeColumnDefinition.TYPE_DATE:
-							v = new ValueMeta(tableDef[colNum].getName(),
-									ValueMetaInterface.TYPE_DATE);
-							v.setOrigin(origin);
-							row.addValueMeta(v);
-	
-							// System.out.println(colDefs[colNum].getName()+"="+
-							// rows.getDate(colNum));
-	
-							break;
-						case SeColumnDefinition.TYPE_CLOB:
-							v = new ValueMeta(tableDef[colNum].getName(),
-									ValueMetaInterface.TYPE_STRING);
-							v.setOrigin(origin);
-							row.addValueMeta(v);
-	
-							// System.out.println(colDefs[colNum].getName()+"="+
-							// rows.getClob(colNum));
-	
-							break;
-						case SeColumnDefinition.TYPE_INT64:
-							v = new ValueMeta(tableDef[colNum].getName(),
-									ValueMetaInterface.TYPE_INTEGER);
-							v.setOrigin(origin);
-							row.addValueMeta(v);
-	
-							// System.out.println(colDefs[colNum].getName()+"="+
-							// rows.getInteger(colNum));
-	
-							break;
-						case SeColumnDefinition.TYPE_INT32:
-							v = new ValueMeta(tableDef[colNum].getName(),
-									ValueMetaInterface.TYPE_INTEGER);
-							v.setOrigin(origin);
-							row.addValueMeta(v);
-							// System.out.println(colDefs[colNum].getName()+"="+
-							// rows.getInteger(colNum));
-	
-							break;
-	
-						case SeColumnDefinition.TYPE_STRING:
-							v = new ValueMeta(tableDef[colNum].getName(),
-									ValueMetaInterface.TYPE_STRING);
-							v.setOrigin(origin);
-							row.addValueMeta(v);
-	
-							// System.out.println(colDefs[colNum].getName()+"="+
-							// rows.getString(colNum));
-	
-							break;
-	
-//						case SeColumnDefinition.TYPE_SHAPE:
-//							if (meta.getIsString() != 0) {
-//								type = ValueMetaInterface.TYPE_STRING;
-//							} else {
-//								type = ValueMetaInterface.TYPE_OBJECT;
-//							}
-//							v = new ValueMeta(tableDef[colNum].getName(), type);
-//							v.setOrigin(origin);
-//							row.addValueMeta(v);
-//	
-//							break;
-	
-						}
-					}
-	
-				}
-			}
-		} catch (SeException e) {
-			e.printStackTrace();
-		}
-	return row;
-}
-	
-	private static void buildRowOne(SeConnection conn, CanalInputMeta meta, List<CheckResultInterface> remarks,
-			String origin, String[] cols) {
-		// TODO Auto-generated method stub
-		
-	}
+
+
 
 	/**
 	 * 保存成文件资源
@@ -555,12 +333,8 @@ public class CanalInputMeta extends BaseStepMeta implements StepMetaInterface{
 		retval.append("    "+XMLHandler.addTagValue("tables",tables)+Const.CR);
 		retval.append("    "+XMLHandler.addTagValue("oneTableName",oneTableName)+Const.CR);
 		
-//		retval.append("    "+XMLHandler.addTagValue("where",where)+Const.CR);
 		retval.append("    "+XMLHandler.addTagValue("columns",columns)+Const.CR);
-
-//		retval.append("    "+XMLHandler.addTagValue("isString",isString)+Const.CR);
-//	    retval.append( "    " + XMLHandler.addTagValue( "variables_active", variableReplacementActive ) );
-        
+      
 		return retval.toString();
 	}
 	

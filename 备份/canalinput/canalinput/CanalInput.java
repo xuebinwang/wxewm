@@ -48,7 +48,6 @@ private static Class<?> PKG = CanalInput.class;
 	public CanalInput(StepMeta stepMeta, StepDataInterface stepDataInterface, int copyNr, TransMeta transMeta,
 			Trans trans) {
 		super(stepMeta, stepDataInterface, copyNr, transMeta, trans);
-		// TODO Auto-generated constructor stub
 	}
 	
 	
@@ -58,16 +57,10 @@ private static Class<?> PKG = CanalInput.class;
 	
 		if (super.init(smi, sdi)) {
 			getConn();
-			List<CheckResultInterface> remarks = new ArrayList<CheckResultInterface>(); // stores
-			// the
-			// errors...
-//			if (meta.getWhere() != null && !meta.getWhere().equals("")) {
-//				data.where=environmentSubstitute(meta.getWhere());
-//			}
+			List<CheckResultInterface> remarks = new ArrayList<CheckResultInterface>();
+
 			data.cols = meta.getColumns().split(",");
 			data.outputRowMeta = CanalInputMeta.buildRow(conn,meta, remarks, getStepname(),data.cols);
-			//data.outputRowData = outputRow.getData();
-			//data.outputRowMeta = outputRow.getRowMeta();
 			
 			return true;
 		}
@@ -158,7 +151,7 @@ private static Class<?> PKG = CanalInput.class;
 //			first = false;
 			//单表逻辑处理
 			if (meta.getIsOneTableString() ==0) {
-				processRowOneTable(data);
+				processRowOneTable(data,meta);
 			}else {
 				//多表逻辑处理
 			}
@@ -174,25 +167,39 @@ private static Class<?> PKG = CanalInput.class;
 	 * 单表逻辑处理
 	 * @param data
 	 */
-	private void processRowOneTable(CanalInputData data){
+	private void processRowOneTable(CanalInputData data,CanalInputMeta meta){
 		connectorInit();
-		Object[] row = new Object[data.cols.length+1]; //多生成一个字段作为rowkey,以表名+第一个字段为主键的key用MD5生成,在meta中多加一个字段hb_row_key
-			try {		
-				JSONArray canalResult = canalUtil.startSubscribe(connector);
+
+		//在CanalInputData data中加eventType，从hbaseoutput获取判断
+		//rowkey由hbaseoutput指定
+		Object[] row = new Object[data.cols.length]; 	
+		try {		
+				JSONArray canalResult = canalUtil.startSubscribe(connector, meta);
 				for (Object object : canalResult) {
 					boolean  hasData = false;
 					JSONObject resultRow = (JSONObject) object;
-					if (resultRow.getString("eventType").equalsIgnoreCase("insert")) {
+					data.eventType = resultRow.getString("eventType");
+					if (resultRow.getString("eventType").equalsIgnoreCase("insert") ||
+							resultRow.getString("eventType").equalsIgnoreCase("update")) {
 						JSONObject columns = resultRow.getJSONObject("columns");				
 						for (int i = 0; i < row.length; i++) {
 							row[i] = columns.get(data.cols[i]);
 							hasData = true;
 						}
-						
-						String input = data.oneTableName+data.oneTableKey;
-						String rowKeyValue = MD5Utils.getRowKey(input);
-						row[row.length] = rowKeyValue;
+
 					}
+					if (resultRow.getString("eventType").equalsIgnoreCase("delete")) {
+						JSONObject conditions = resultRow.getJSONObject("condition");				
+						for (int i = 0; i < row.length; i++) {
+							if (conditions.get(data.cols[i]) != null) {
+								row[i] = conditions.get(data.cols[i]);
+								hasData = true;
+							}
+							
+						}
+					}
+					
+					
 					if (hasData) {					
 						log.logBasic("hasData *****");
 						putRow(data.outputRowMeta, row);
@@ -215,7 +222,7 @@ private static Class<?> PKG = CanalInput.class;
 		try {
 			//创建订阅，开启连接
 			if (connector == null) {
-				connector = CanalConnectors.newSingleConnector(new InetSocketAddress(meta.getServer(), meta.getCanalPort()), "canal", "",
+				connector = CanalConnectors.newSingleConnector(new InetSocketAddress(meta.getServer(), meta.getCanalPort()), meta.getCanalInstance(), "",
 						"");
 				connector.connect();
 				if (canalUtil == null) {

@@ -4,9 +4,13 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.slf4j.Logger;
+import org.jfree.util.Log;
+
+import com.alibaba.fastjson.JSONObject;
+
 
 public class DatabaseUtils {
+ 
     private static String driver;
     private static String url;
     private static String user;
@@ -38,7 +42,8 @@ public class DatabaseUtils {
        	
             conn = DriverManager.getConnection(url, user, pwd);
         } catch (SQLException e) {        
-        	 throw new RuntimeException( "Class conn has error ! : url :"+ url+" user : "+ user +"+ pwd : "+ pwd );         
+        	 e.printStackTrace();
+        	 Log.error( "Class conn has error ! : url :"+ url+" user : "+ user +"+ pwd : "+ pwd );         
         }
         return conn;
     }
@@ -188,13 +193,37 @@ public class DatabaseUtils {
         }
         return columnComments;
     }
-    public static void main(String[] args) {
-        List<String> tableNames = getTableNames();
-        System.out.println("tableNames:" + tableNames);
-        for (String tableName : tableNames) {
-            System.out.println("ColumnNames:" + getColumnNames(tableName));
-            System.out.println("ColumnTypes:" + getColumnTypes(tableName));
-            System.out.println("ColumnComments:" + getColumnComments(tableName));
+    
+    /*
+     * 
+     * 返回json的      字段：value 数组
+     */
+    public static JSONObject queryResultById(String sql, String tableName, List<String> columnNames){
+   	
+        PreparedStatement pStemt = null;
+        ResultSet rs = null;
+        JSONObject resultQuery = new JSONObject();
+        try {
+            pStemt = conn.prepareStatement(sql);
+            rs = pStemt.executeQuery();
+            while (rs.next()) {             
+                for (int i = 0; i < columnNames.size(); i++) {
+                    resultQuery.put(columnNames.get(i),rs.getObject(columnNames.get(i)).toString());
+                }      
+                return resultQuery;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }finally {
+            if (rs != null) {
+                try {
+                    rs.close();
+                    closeConnection(conn);
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
         }
+        return resultQuery;
     }
 }

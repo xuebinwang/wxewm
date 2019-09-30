@@ -17,6 +17,7 @@ import com.primeton.di.trans.step.StepDataInterface;
 
 /**
  * 这个类负责存储一些CanalInput运行时的变量，例如：字段类型数组，数据库连接等
+ * 
  * @author my
  *
  */
@@ -25,18 +26,15 @@ public class CanalInputData extends BaseStepData implements StepDataInterface {
 	public RowMetaInterface outputRowMeta;
 	public Object[] outputRowData;
 	public Connection connection;
-//	public SeColumnDefinition[] colDefs;
-//	private List rows;
+
 	public ValueMetaInterface valueMeta;
-//	public Table table  = null;
-//	public Query query = null;
-//	public String where="";
-//	SeSqlConstruct sqlConstruct = null;
 	
 	public String oneTableKey;
 	public String oneTableName;
 	public String[] cols;//单表为字段，多表为表名
 	public String[] colsType;
+	
+	public String eventType;
 	
 	public CanalInputData(){
 		super();
