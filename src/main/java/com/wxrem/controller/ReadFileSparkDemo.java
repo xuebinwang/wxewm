@@ -11,7 +11,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 
 /**
- * spark-java 本地文件读取和写出
+ * spark-java 本地文件读取和写出hadoop
  *
  * 1.本地配置java、scala、spark+hadoop环境寄变量
  *      <scala.version>2.11.8</scala.version>
@@ -42,6 +42,9 @@ public class ReadFileSparkDemo {
         JavaPairRDD<Integer, String> sortRDD = count2WordRDD.sortByKey(false);
         JavaPairRDD<String, Integer> resultRDD = sortRDD.mapToPair(tuple -> new Tuple2<>(tuple._2, tuple._1));
         resultRDD.saveAsTextFile("D:\\result2");
+        //(hhhh,1)
+        //(adada,1)
+        //(sfesfsef,1)
 
 //        resultRDD.collect();
     }

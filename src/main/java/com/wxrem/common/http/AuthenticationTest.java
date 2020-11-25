@@ -8,6 +8,7 @@ import java.util.Map;
 
 /**
  * @author wxb
+ * 实名认证
  * @date 2020-08-10 16:03
  */
 public class AuthenticationTest {

@@ -99,11 +99,15 @@
     </dependency>
 
     <!-- redis依赖-->
+    <!-- 升级到SpringBoot 2.X版本,jedis依赖变成了lettuce-core依赖,异常：
+    Unable to connect to Redis; nested exception is io.lettuce.core.RedisConnectionException: Unable t
+    换回去试试  参考 https://blog.csdn.net/single_cong/article/details/101019146 -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-data-redis</artifactId>
     </dependency>
-      <dependency>
+
+    <dependency>
         <groupId>org.projectlombok</groupId>
         <artifactId>lombok</artifactId>
         <version>1.16.6</version>
@@ -113,7 +117,7 @@
         <artifactId>jtds</artifactId>
         <version>1.2.7</version>
      </dependency>
-  </dependencies>
+</dependencies>
 
   <build>
     <pluginManagement>

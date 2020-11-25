@@ -35,6 +35,8 @@ import java.util.stream.Collectors;
  */
 public class IDCard {
     static List<String> allLines = null;
+    private static int CHINA_ID_MAX_LENGTH;
+
     static {
         try {
             File directory = new File("src/main/resources/身份证地址码对照表.txt");
@@ -45,12 +47,6 @@ public class IDCard {
             e.printStackTrace();
         }
     }
-    /** 中国公民身份证号码最小长度。 */
-    public  final int CHINA_ID_MIN_LENGTH = 15;
-
-    /** 中国公民身份证号码最大长度。 */
-    public  final int CHINA_ID_MAX_LENGTH = 18;
-
     /**
      * 根据身份编号获取年龄
      *
@@ -138,19 +134,19 @@ public class IDCard {
         }
         return sAddress;
     }
-
+//460001
     public static  void  main(String [] a){
-        String idcard="610203199209275127";
+        String idcard = "610113199209275127";
         String sr = getBirthByIdCard(idcard);
         System.out.println("生日:" + sr);
         System.out.println("所属地：" + getAddressByCardId(idcard));
-        String sex= getGenderByIdCard(idcard);
+        String sex = getGenderByIdCard(idcard);
         System.out.println("性别:" + sex);
-        int age= getAgeByIdCard(idcard);
+        int age = getAgeByIdCard(idcard);
         System.out.println("年龄:" + age);
-        Short nian=getYearByIdCard(idcard);
-        Short yue=getMonthByIdCard(idcard);
-        Short ri=getDateByIdCard(idcard);
+        Short nian = getYearByIdCard(idcard);
+        Short yue = getMonthByIdCard(idcard);
+        Short ri = getDateByIdCard(idcard);
         System.out.print(nian+"年"+yue+"月"+ri+"日");
 
 
